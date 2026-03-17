@@ -8,6 +8,26 @@ version = "0.1.0"
 description = "Orchestrate multi-round debates between LLM CLI tools"
 requires-python = ">=3.10"
 license = "MIT"
+authors = [
+    { name = "Wenrui Wu", email = "wuwenrui555@gmail.com" },
+]
+readme = "README.md"
+keywords = ["llm", "debate", "claude", "codex", "ai", "orchestrator"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/wuwenrui555/llm-debate"
+Repository = "https://github.com/wuwenrui555/llm-debate"
+Issues = "https://github.com/wuwenrui555/llm-debate/issues"
 
 [project.scripts]
 llm-debate = "llm_debate.cli:main"

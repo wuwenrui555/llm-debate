@@ -13,7 +13,7 @@ Orchestrate multi-round debates between LLM CLI tools (Claude Code, Codex, or an
 ## Install
 
 ```bash
-pip install llm-debate
+pip install git+https://github.com/wuwenrui555/llm-debate.git
 ```
 
 ### Prerequisites
