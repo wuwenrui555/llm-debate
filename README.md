@@ -117,6 +117,10 @@ Built-in participants use permissionless modes for unattended operation:
 | `--resume` | `false` | Resume from existing files |
 | `--custom-cmd` | | Define custom participants |
 
+## Vibe Coding
+
+This project was built entirely through vibe coding — conceived, designed, implemented, reviewed, and published in a single conversation with [Claude Code](https://claude.com/claude-code). No code was written manually.
+
 ## License
 
 MIT
