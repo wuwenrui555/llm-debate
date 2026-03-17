@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-debate"
-version = "0.1.0"
+version = "0.2.0"
 description = "Orchestrate multi-round debates between LLM CLI tools"
 requires-python = ">=3.10"
 license = "MIT"
