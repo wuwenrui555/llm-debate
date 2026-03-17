@@ -16,6 +16,8 @@ from pathlib import Path
 
 from .participant import Participant, TurnContext
 
+_TURN_FILE_RE = re.compile(r"(\d+)_(.+)\.md$")
+
 
 @dataclass
 class DebateConfig:
@@ -83,25 +85,31 @@ class Orchestrator:
     def __init__(self, config: DebateConfig):
         self.config = config
         self.output_dir = config.output_dir
-        self.logger = DebateLogger(self.output_dir / "debate_log.txt")
 
         if len(config.participants) < 2:
             raise ValueError("At least 2 participants are required")
+
+        names = [p.name for p in config.participants]
+        if len(names) != len(set(names)):
+            raise ValueError("Participant names must be unique")
 
     def _log(self, msg: str):
         self.logger.log(msg)
 
     def _output_file(self, turn_index: int, participant: Participant) -> Path:
-        return self.output_dir / f"{turn_index:02d}_{participant.name}.md"
+        return self.output_dir / f"{turn_index:03d}_{participant.name}.md"
 
     def _history_files(self) -> list[Path]:
-        return sorted(self.output_dir.glob("[0-9][0-9]_*.md"))
+        return sorted(
+            f for f in self.output_dir.glob("*_*.md")
+            if _TURN_FILE_RE.match(f.name)
+        )
 
     def _latest_file_by(self, exclude: Participant) -> Path | None:
         """Find the latest file NOT written by the given participant."""
         files = self._history_files()
         for f in reversed(files):
-            if f"_{exclude.name}.md" not in f.name:
+            if not f.name.endswith(f"_{exclude.name}.md"):
                 return f
         return None
 
@@ -124,12 +132,11 @@ class Orchestrator:
             return 1, 1
 
         n_participants = len(self.config.participants)
-        participant_names = [p.name for p in self.config.participants]
 
         # Parse existing turns: extract (turn_index, participant_name)
         existing_turns: list[tuple[int, str]] = []
         for f in files:
-            match = re.match(r"(\d{2})_(.+)\.md", f.name)
+            match = _TURN_FILE_RE.match(f.name)
             if match:
                 existing_turns.append((int(match.group(1)), match.group(2)))
 
@@ -137,20 +144,9 @@ class Orchestrator:
             return 1, 1
 
         last_turn_index = existing_turns[-1][0]
-        last_participant = existing_turns[-1][1]
-
-        # Figure out which participant spoke last
-        try:
-            last_p_idx = participant_names.index(last_participant)
-        except ValueError:
-            # Unknown participant in files, start after last turn
-            return (last_turn_index // n_participants) + 1, last_turn_index + 1
 
         next_turn_index = last_turn_index + 1
-        # round = ceil(turn_index / n_participants)
         next_round = (next_turn_index - 1) // n_participants + 1
-        # which participant index within the round
-        next_p_idx = (next_turn_index - 1) % n_participants
 
         return next_round, next_turn_index
 
@@ -168,6 +164,7 @@ class Orchestrator:
         """
         cfg = self.config
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.logger = DebateLogger(self.output_dir / "debate_log.txt")
 
         n_participants = len(cfg.participants)
         participant_names = ", ".join(p.name for p in cfg.participants)
@@ -239,14 +236,20 @@ class Orchestrator:
                 self._log(f"  [{participant.name}] Output -> {out_file.name}")
 
                 turn_start = time.time()
-                ok = participant.run(ctx, timeout=cfg.turn_timeout)
+                result = participant.run(ctx, timeout=cfg.turn_timeout)
                 turn_elapsed = time.time() - turn_start
 
-                if not ok:
+                if not result.success:
                     self._log(
                         f"  [{participant.name}] FAILED after "
                         f"{_format_duration(turn_elapsed)}"
                     )
+                    self._log(f"  [{participant.name}] Error: {result.error}")
+                    if result.stderr:
+                        # Show first few lines of stderr for diagnostics
+                        stderr_preview = result.stderr.strip().split("\n")[:5]
+                        for line in stderr_preview:
+                            self._log(f"  [{participant.name}] stderr: {line}")
                     total_elapsed = time.time() - debate_start
                     self._log(
                         f"\nDebate aborted. "

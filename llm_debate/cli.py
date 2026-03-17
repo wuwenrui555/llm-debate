@@ -8,7 +8,7 @@ Usage:
                --output-dir ./debate_output
 
     llm-debate --participants claude codex gemini \
-               --custom-cmd gemini "gemini-cli --auto {prompt}" \
+               --custom-cmd gemini "gemini-cli --auto {prompt_file}" \
                --topic "Architecture review" \
                --context-file ./context.md
 """
@@ -16,6 +16,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import shlex
 import sys
 from pathlib import Path
 
@@ -35,7 +36,7 @@ BUILTIN_PARTICIPANTS: dict[str, type[Participant]] = {
 
 def parse_custom_cmds(raw: list[str] | None) -> dict[str, list[str]]:
     """
-    Parse --custom-cmd pairs: name "cmd --flag {prompt}"
+    Parse --custom-cmd pairs: name "cmd --flag {prompt_file}"
     Returns {name: [cmd_template_parts]}.
     """
     if not raw:
@@ -47,7 +48,7 @@ def parse_custom_cmds(raw: list[str] | None) -> dict[str, list[str]]:
     for i in range(0, len(raw), 2):
         name = raw[i]
         cmd_str = raw[i + 1]
-        result[name] = cmd_str.split()
+        result[name] = shlex.split(cmd_str)
     return result
 
 
@@ -133,7 +134,7 @@ def main(argv: list[str] | None = None):
         "--custom-cmd",
         nargs="*",
         metavar="NAME CMD",
-        help='Define custom participants: --custom-cmd mybot "mybot-cli --auto {prompt}"',
+        help='Define custom participants: --custom-cmd mybot "mybot-cli --auto {prompt_file}"',
     )
     parser.add_argument(
         "--resume",
@@ -147,15 +148,12 @@ def main(argv: list[str] | None = None):
     custom_cmds = parse_custom_cmds(args.custom_cmd)
     participants = build_participants(args.participants, custom_cmds)
 
-    context = args.context
-    if args.context_file:
-        context = args.context_file.read_text(encoding="utf-8")
-
     config = DebateConfig(
         topic=args.topic,
         participants=participants,
         output_dir=args.output_dir,
-        context=context,
+        context=args.context,
+        context_file=args.context_file,
         max_rounds=args.max_rounds,
         consensus_marker=args.consensus_marker,
         turn_timeout=args.turn_timeout,

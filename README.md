@@ -84,6 +84,15 @@ debate = Orchestrator(DebateConfig(
 debate.run()
 ```
 
+## Security
+
+Built-in participants use permissionless modes for unattended operation:
+
+- **Claude Code**: `--dangerously-skip-permissions` — bypasses all permission checks
+- **Codex**: `--dangerously-bypass-approvals-and-sandbox` — disables all safety checks
+
+**Only run in trusted or sandboxed environments.** The LLM participants can read/write files and execute commands without restriction.
+
 ## How It Works
 
 1. Participants take turns writing numbered Markdown files (`01_claude.md`, `02_codex.md`, ...)
