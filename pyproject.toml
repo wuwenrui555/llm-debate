@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-debate"
-version = "0.2.0"
+version = "0.4.0"
 description = "Orchestrate multi-round debates between LLM CLI tools"
 requires-python = ">=3.10"
 license = "MIT"
@@ -28,6 +28,9 @@ classifiers = [
 Homepage = "https://github.com/wuwenrui555/llm-debate"
 Repository = "https://github.com/wuwenrui555/llm-debate"
 Issues = "https://github.com/wuwenrui555/llm-debate/issues"
+
+[tool.setuptools.package-data]
+llm_debate = ["py.typed"]
 
 [project.scripts]
 llm-debate = "llm_debate.cli:main"

@@ -15,9 +15,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from .participant import Participant, TurnContext
+from .participant import Participant, TurnContext, _SAFE_NAME_RE
 
-_TURN_FILE_RE = re.compile(r"(\d+)_(.+)\.md$")
+_TURN_FILE_RE = re.compile(
+    r"(\d+)_([a-zA-Z0-9][a-zA-Z0-9_-]*)\.md$"
+)
 
 
 def _parse_turn_file(name: str) -> tuple[int, str] | None:
@@ -45,14 +47,20 @@ class DebateConfig:
 
     def __post_init__(self):
         self.output_dir = Path(self.output_dir)
-        if self.context_file and not self.context:
-            self.context = Path(self.context_file).read_text(encoding="utf-8")
-        elif self.context_file and self.context:
-            print(
-                "Warning: both --context and --context-file provided, "
-                "using --context and ignoring --context-file",
-                file=sys.stderr,
-            )
+        if self.context_file:
+            cf = Path(self.context_file)
+            if not cf.is_file():
+                raise FileNotFoundError(
+                    f"Context file not found: {self.context_file}"
+                )
+            if self.context:
+                print(
+                    "Warning: both --context and --context-file provided, "
+                    "using --context and ignoring --context-file",
+                    file=sys.stderr,
+                )
+            else:
+                self.context = cf.read_text(encoding="utf-8")
         if self.max_rounds < 1:
             raise ValueError("max_rounds must be >= 1")
         if self.turn_timeout < 1:
@@ -89,8 +97,10 @@ class DebateLogger:
     def banner(self, title: str, char: str = "=", width: int = 60):
         self.log("")
         self.separator(char, width)
-        padding = (width - len(title) - 2) // 2
-        self.log(f"{char * padding} {title} {char * padding}")
+        inner_width = width - 2  # spaces around title
+        left_pad = (inner_width - len(title)) // 2
+        right_pad = inner_width - len(title) - left_pad
+        self.log(f"{char * left_pad} {title} {char * right_pad}")
         self.separator(char, width)
 
 
@@ -121,10 +131,12 @@ class Orchestrator:
         return self.output_dir / f"{turn_index:03d}_{participant.name}.md"
 
     def _history_files(self) -> list[Path]:
-        return sorted(
+        files = [
             f for f in self.output_dir.glob("[0-9]*_*.md")
-            if _TURN_FILE_RE.match(f.name)
-        )
+            if _parse_turn_file(f.name) is not None
+        ]
+        files.sort(key=lambda f: _parse_turn_file(f.name)[0])
+        return files
 
     def _latest_file_by(self, exclude: Participant) -> Path | None:
         """Find the latest file NOT written by the given participant."""
@@ -260,7 +272,9 @@ class Orchestrator:
                 # Show who is speaking and what they're responding to
                 responding_to = ""
                 if latest_opponent:
-                    responding_to = f" (responding to {latest_opponent.name})"
+                    parsed = _parse_turn_file(latest_opponent.name)
+                    opponent_name = parsed[1] if parsed else latest_opponent.name
+                    responding_to = f" (responding to {opponent_name})"
 
                 self._log(
                     f"  [{participant.name}] Starting turn {turn_index}{responding_to}..."

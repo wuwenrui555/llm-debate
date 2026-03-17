@@ -127,26 +127,34 @@ class Participant(ABC):
 
         try:
             cmd = self.build_command(prompt_file, ctx.output_dir)
-            result = subprocess.run(
+
+            # Use Popen for reliable timeout handling across Python 3.10+.
+            # subprocess.run with timeout may not kill the child on all
+            # Python versions when capture_output=True.
+            proc = subprocess.Popen(
                 cmd,
                 cwd=ctx.output_dir,
-                check=True,
-                timeout=timeout,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
             )
-        except subprocess.TimeoutExpired:
-            return TurnResult(
-                success=False,
-                error=f"Timed out after {timeout}s",
-            )
-        except subprocess.CalledProcessError as e:
-            return TurnResult(
-                success=False,
-                error=f"Process exited with code {e.returncode}",
-                return_code=e.returncode,
-                stderr=(e.stderr or "")[:2000],
-            )
+            try:
+                stdout, stderr = proc.communicate(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+                return TurnResult(
+                    success=False,
+                    error=f"Timed out after {timeout}s",
+                )
+
+            if proc.returncode != 0:
+                return TurnResult(
+                    success=False,
+                    error=f"Process exited with code {proc.returncode}",
+                    return_code=proc.returncode,
+                    stderr=(stderr or "")[:2000],
+                )
         finally:
             prompt_file.unlink(missing_ok=True)
 

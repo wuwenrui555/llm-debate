@@ -95,7 +95,7 @@ Built-in participants use permissionless modes for unattended operation:
 
 ## How It Works
 
-1. Participants take turns writing numbered Markdown files (`01_claude.md`, `02_codex.md`, ...)
+1. Participants take turns writing numbered Markdown files (`001_claude.md`, `002_codex.md`, ...)
 2. Each participant reads the previous opponent's file and responds
 3. The debate continues until:
    - A participant writes `[CONSENSUS REACHED]` in their output

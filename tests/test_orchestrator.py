@@ -70,6 +70,14 @@ class TestDebateConfig:
         cfg = DebateConfig(topic="t", participants=_make_participants(), round_delay=0)
         assert cfg.round_delay == 0
 
+    def test_context_file_not_found(self, tmp_path):
+        with pytest.raises(FileNotFoundError, match="Context file not found"):
+            DebateConfig(
+                topic="t",
+                participants=_make_participants(),
+                context_file=tmp_path / "nonexistent.md",
+            )
+
 
 class TestOrchestratorValidation:
     def test_minimum_participants(self):
