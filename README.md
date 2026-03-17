@@ -1,5 +1,9 @@
 # llm-debate
 
+[![version](https://img.shields.io/github/v/tag/wuwenrui555/llm-debate?label=version&sort=semver)](https://github.com/wuwenrui555/llm-debate/releases)
+[![python](https://img.shields.io/badge/python-≥3.10-blue)](https://github.com/wuwenrui555/llm-debate)
+[![license](https://img.shields.io/github/license/wuwenrui555/llm-debate)](https://github.com/wuwenrui555/llm-debate/blob/main/LICENSE)
+
 Orchestrate multi-round debates between LLM CLI tools (Claude Code, Codex, or any custom CLI).
 
 ## Features
