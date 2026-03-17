@@ -7,7 +7,7 @@ from importlib.metadata import version, PackageNotFoundError
 try:
     __version__ = version("llm-debate")
 except PackageNotFoundError:
-    __version__ = "0.1.0"
+    __version__ = "0.0.0-dev"
 
 from .orchestrator import DebateConfig, Orchestrator
 from .participant import (

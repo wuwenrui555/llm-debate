@@ -42,8 +42,7 @@ def parse_custom_cmds(raw: list[str] | None) -> dict[str, list[str]]:
     if not raw:
         return {}
     if len(raw) % 2 != 0:
-        print("Error: --custom-cmd requires pairs of <name> <command>", file=sys.stderr)
-        sys.exit(1)
+        raise ValueError("--custom-cmd requires pairs of <name> <command>")
     result = {}
     for i in range(0, len(raw), 2):
         name = raw[i]
@@ -64,13 +63,11 @@ def build_participants(
         elif name in custom_cmds:
             participants.append(CustomParticipant(name=name, cmd_template=custom_cmds[name]))
         else:
-            print(
-                f"Error: unknown participant '{name}'. "
+            raise ValueError(
+                f"Unknown participant '{name}'. "
                 f"Use a built-in ({', '.join(BUILTIN_PARTICIPANTS)}) "
-                f"or define it with --custom-cmd {name} '<command>'",
-                file=sys.stderr,
+                f"or define it with --custom-cmd {name} '<command>'"
             )
-            sys.exit(1)
     return participants
 
 

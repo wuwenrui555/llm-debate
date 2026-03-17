@@ -47,7 +47,7 @@ llm-debate --participants claude codex \
 
 # Custom participant
 llm-debate --participants claude mybot \
-           --custom-cmd mybot "my-llm-cli --auto {prompt}" \
+           --custom-cmd mybot "my-llm-cli --auto {prompt_file}" \
            --topic "Code review"
 ```
 
@@ -78,7 +78,7 @@ debate = Orchestrator(DebateConfig(
     topic="Architecture review",
     participants=[
         ClaudeParticipant(name="claude"),
-        CustomParticipant(name="gemini", cmd_template=["gemini-cli", "--auto", "{prompt}"]),
+        CustomParticipant(name="gemini", cmd_template=["gemini-cli", "--auto", "{prompt_file}"]),
     ],
 ))
 debate.run()

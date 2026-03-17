@@ -111,7 +111,10 @@ class Participant(ABC):
         """Execute the participant and wait for output file."""
         prompt = self.build_prompt(ctx)
 
-        # Write prompt to a temp file to avoid exposing it in process args
+        # Write prompt to a temp file for CustomParticipant use.
+        # Note: built-in Claude/Codex participants still pass prompt via
+        # CLI args as their CLIs require it. On shared systems the prompt
+        # may be visible in process listings.
         with tempfile.NamedTemporaryFile(
             mode="w",
             suffix=".txt",

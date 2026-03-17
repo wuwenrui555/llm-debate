@@ -9,6 +9,7 @@ from a previous session.
 from __future__ import annotations
 
 import re
+import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -17,6 +18,14 @@ from pathlib import Path
 from .participant import Participant, TurnContext
 
 _TURN_FILE_RE = re.compile(r"(\d+)_(.+)\.md$")
+
+
+def _parse_turn_file(name: str) -> tuple[int, str] | None:
+    """Extract (turn_index, participant_name) from a filename."""
+    match = _TURN_FILE_RE.match(name)
+    if match:
+        return int(match.group(1)), match.group(2)
+    return None
 
 
 @dataclass
@@ -38,6 +47,18 @@ class DebateConfig:
         self.output_dir = Path(self.output_dir)
         if self.context_file and not self.context:
             self.context = Path(self.context_file).read_text(encoding="utf-8")
+        elif self.context_file and self.context:
+            print(
+                "Warning: both --context and --context-file provided, "
+                "using --context and ignoring --context-file",
+                file=sys.stderr,
+            )
+        if self.max_rounds < 1:
+            raise ValueError("max_rounds must be >= 1")
+        if self.turn_timeout < 1:
+            raise ValueError("turn_timeout must be >= 1")
+        if self.round_delay < 0:
+            raise ValueError("round_delay must be >= 0")
 
 
 def _format_duration(seconds: float) -> str:
@@ -101,7 +122,7 @@ class Orchestrator:
 
     def _history_files(self) -> list[Path]:
         return sorted(
-            f for f in self.output_dir.glob("*_*.md")
+            f for f in self.output_dir.glob("[0-9]*_*.md")
             if _TURN_FILE_RE.match(f.name)
         )
 
@@ -109,7 +130,8 @@ class Orchestrator:
         """Find the latest file NOT written by the given participant."""
         files = self._history_files()
         for f in reversed(files):
-            if not f.name.endswith(f"_{exclude.name}.md"):
+            parsed = _parse_turn_file(f.name)
+            if parsed and parsed[1] != exclude.name:
                 return f
         return None
 
@@ -133,12 +155,12 @@ class Orchestrator:
 
         n_participants = len(self.config.participants)
 
-        # Parse existing turns: extract (turn_index, participant_name)
+        # Parse existing turns
         existing_turns: list[tuple[int, str]] = []
         for f in files:
-            match = _TURN_FILE_RE.match(f.name)
-            if match:
-                existing_turns.append((int(match.group(1)), match.group(2)))
+            parsed = _parse_turn_file(f.name)
+            if parsed:
+                existing_turns.append(parsed)
 
         if not existing_turns:
             return 1, 1
@@ -157,6 +179,14 @@ class Orchestrator:
             size = f.stat().st_size
             mtime = datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
             self._log(f"  {f.name}  ({size:,} bytes, {mtime})")
+
+    def _clean_stale_files(self):
+        """Remove stale output files from a previous non-resume run."""
+        stale = self._history_files()
+        if stale:
+            self._log(f"Cleaning {len(stale)} stale file(s) from previous run...")
+            for f in stale:
+                f.unlink()
 
     def run(self) -> bool:
         """
@@ -182,6 +212,8 @@ class Orchestrator:
             self._print_status(existing_files)
             self._log(f"Resuming from round {start_round}, turn {start_turn}")
         else:
+            if existing_files:
+                self._clean_stale_files()
             self.logger.banner("LLM DEBATE")
 
         self._log(f"Topic: {cfg.topic}")
